@@ -1,0 +1,29 @@
+name: Windows build
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Select MSVC Rust toolchain
+        run: rustup default stable-x86_64-pc-windows-msvc
+      - name: Install pnpm
+        run: |
+          $packageManager = (Get-Content -Raw package.json | ConvertFrom-Json).packageManager
+          npm.cmd install --global $packageManager
+      - name: Install dependencies
+        run: pnpm.cmd install --frozen-lockfile
+      - name: Build Tauri executable
+        run: pnpm.cmd tauri build --no-bundle
