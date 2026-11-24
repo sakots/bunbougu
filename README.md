@@ -29,3 +29,4 @@ Android は Android SDK/NDK のセットアップ後に `pnpm tauri android init
 - `[[ページ名]]` でノート間を移動する機能を追加。
 - `pnpm dev` でアプリが起動し、ブラウザーで開いた場合は起動方法を案内するよう修正。
 - Windows のクローン・ビルド手順と、GitHub Actions による Windows ビルドチェックを追加。
+- Windows で Rust のビルド中に開発サーバーが `EBUSY` で停止する問題を修正。
