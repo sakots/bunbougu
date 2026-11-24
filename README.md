@@ -10,8 +10,10 @@ Node.js、pnpm、Rust、[Tauri 2 のプラットフォーム別依存関係](htt
 
 ```sh
 pnpm install
-pnpm tauri dev
+pnpm dev
 ```
+
+ノートの編集は、起動した Tauri のウィンドウで行ってください。ブラウザーで開発用 URL を開いても、端末内のノートにはアクセスできません。
 
 Android は Android SDK/NDK のセットアップ後に `pnpm tauri android init`、`pnpm tauri android dev` を実行してください。
 
@@ -23,3 +25,4 @@ Android は Android SDK/NDK のセットアップ後に `pnpm tauri android init
 
 - ノートを作成・編集し、端末内に保存する機能を追加。
 - `[[ページ名]]` でノート間を移動する機能を追加。
+- `pnpm dev` でアプリが起動し、ブラウザーで開いた場合は起動方法を案内するよう修正。
