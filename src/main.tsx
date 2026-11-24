@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { invoke, isTauri } from '@tauri-apps/api/core';
 import { type FormEvent, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { pageLinks, pageName } from './wiki';
@@ -100,4 +100,11 @@ function App() {
   );
 }
 
-createRoot(document.getElementById('root')!).render(<App />);
+createRoot(document.getElementById('root')!).render(
+  isTauri() ? <App /> : (
+    <main>
+      <h1>ぶんぼうぐやさん</h1>
+      <p>ブラウザーではノートを開けません。<code>pnpm dev</code> で起動したアプリのウィンドウを使ってください。</p>
+    </main>
+  ),
+);

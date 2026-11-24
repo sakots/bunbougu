@@ -5,7 +5,8 @@
   "type": "module",
   "packageManager": "pnpm@12.15.0",
   "scripts": {
-    "dev": "vite",
+    "dev": "tauri dev",
+    "dev:frontend": "vite",
     "build": "tsc --noEmit && vite build",
     "test": "node --disable-warning=ExperimentalWarning --test src/*.test.ts",
     "tauri": "tauri"
