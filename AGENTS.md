@@ -3,6 +3,7 @@
 ## プロジェクト概要
 
 ぶんぼうぐやさんは、obsidianとscrapBoxをあわせたようなアプリを目指します。
+androidスマホとPC（windows/ubuntu）で同期できるよう作ります。
 
 ## コーディング
 
