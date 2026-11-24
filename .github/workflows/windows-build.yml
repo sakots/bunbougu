@@ -16,9 +16,11 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: '24'
-      - name: Install Rust and pnpm
+          package-manager-cache: false
+      - name: Select MSVC Rust toolchain
+        run: rustup default stable-x86_64-pc-windows-msvc
+      - name: Install pnpm
         run: |
-          rustup default stable-x86_64-pc-windows-msvc
           $packageManager = (Get-Content -Raw package.json | ConvertFrom-Json).packageManager
           npm.cmd install --global $packageManager
       - name: Install dependencies
