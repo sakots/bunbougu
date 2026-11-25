@@ -6,29 +6,69 @@ import './style.css';
 
 const comparePageNames = new Intl.Collator('ja', { numeric: true }).compare;
 
+type Workspace = { folder: string; notes: Record<string, string> };
+type LoadResult = [boolean, { Ok: Workspace } | { Err: string }];
+
 function App() {
   const [notes, setNotes] = useState<Map<string, string> | null>(null);
   const [title, setTitle] = useState<string | null>(null);
   const [nameInput, setNameInput] = useState('');
   const [body, setBody] = useState('');
   const [saving, setSaving] = useState(false);
+  const [folder, setFolder] = useState('');
+  const [canChooseFolder, setCanChooseFolder] = useState(false);
+  const [choosingFolder, setChoosingFolder] = useState(false);
   const [error, setError] = useState('');
   const pageNames = useMemo(() => (notes ? [...notes.keys()].sort(comparePageNames) : []), [notes]);
 
   useEffect(() => {
-    invoke<Record<string, string>>('load_notes').then(
-      (saved) => setNotes(new Map(Object.entries(saved))),
+    invoke<LoadResult>('load_notes').then(
+      ([canChoose, result]) => {
+        setCanChooseFolder(canChoose);
+        if ('Ok' in result) {
+          setFolder(result.Ok.folder);
+          setNotes(new Map(Object.entries(result.Ok.notes)));
+        } else {
+          setError(`読み込みに失敗しました: ${result.Err}`);
+        }
+      },
       (cause) => setError(`読み込みに失敗しました: ${cause}`),
     );
   }, []);
 
-  if (notes === null) {
-    return <main><h1>ぶんぼうぐやさん</h1><p role={error ? 'alert' : 'status'}>{error || '読み込み中…'}</p></main>;
+  const savedBody = title === null ? undefined : notes?.get(title);
+  const dirty = title !== null && body !== (savedBody ?? '');
+  const canNavigate = !dirty && !saving && !choosingFolder;
+
+  async function chooseFolder() {
+    if (!canNavigate) return;
+    setChoosingFolder(true);
+    try {
+      const workspace = await invoke<Workspace | null>('choose_storage_folder');
+      if (workspace === null) return;
+      setFolder(workspace.folder);
+      setNotes(new Map(Object.entries(workspace.notes)));
+      setTitle(null);
+      setNameInput('');
+      setBody('');
+      setError('');
+    } catch (cause) {
+      setError(`保存フォルダーを変更できませんでした: ${cause}`);
+    } finally {
+      setChoosingFolder(false);
+    }
   }
 
-  const savedBody = title === null ? undefined : notes.get(title);
-  const dirty = title !== null && body !== (savedBody ?? '');
-  const canNavigate = !dirty && !saving;
+  const folderControl = canChooseFolder && (
+    <div className="actions storage-folder">
+      <button type="button" disabled={!canNavigate} onClick={chooseFolder}>保存フォルダーを選択</button>
+      {folder && <span>保存先: {folder}</span>}
+    </div>
+  );
+
+  if (notes === null) {
+    return <main><h1>ぶんぼうぐやさん</h1>{folderControl}<p role={error ? 'alert' : 'status'}>{error || '読み込み中…'}</p></main>;
+  }
 
   function open(name: string) {
     if (!canNavigate || notes === null) return;
@@ -49,7 +89,7 @@ function App() {
   }
 
   async function save() {
-    if (title === null || notes === null || saving) return;
+    if (title === null || notes === null || saving || choosingFolder) return;
     setSaving(true);
     setError('');
     try {
@@ -65,6 +105,7 @@ function App() {
   return (
     <main>
       <h1>ぶんぼうぐやさん</h1>
+      {folderControl}
       <div className="workspace">
         <aside aria-label="ページ一覧">
           <form onSubmit={openFromInput}>
@@ -104,10 +145,10 @@ function App() {
             <>
               <h2>{title}</h2>
               <label htmlFor="note-body">本文</label>
-              <textarea id="note-body" value={body} onChange={(event) => setBody(event.target.value)} disabled={saving} />
+              <textarea id="note-body" value={body} onChange={(event) => setBody(event.target.value)} disabled={saving || choosingFolder} />
               <div className="actions">
-                <button type="button" onClick={save} disabled={saving || (!dirty && savedBody !== undefined)}>保存</button>
-                <button type="button" onClick={() => { setBody(savedBody ?? ''); setError(''); }} disabled={!dirty || saving}>変更を戻す</button>
+                <button type="button" onClick={save} disabled={saving || choosingFolder || (!dirty && savedBody !== undefined)}>保存</button>
+                <button type="button" onClick={() => { setBody(savedBody ?? ''); setError(''); }} disabled={!dirty || saving || choosingFolder}>変更を戻す</button>
                 <span role="status">{saving ? '保存中…' : dirty || savedBody === undefined ? '未保存' : '保存済み'}</span>
               </div>
               <h3>ページリンク</h3>
