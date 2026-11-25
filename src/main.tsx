@@ -1,8 +1,10 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
-import { type FormEvent, useEffect, useState } from 'react';
+import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { pageLinks, pageName } from './wiki';
 import './style.css';
+
+const comparePageNames = new Intl.Collator('ja', { numeric: true }).compare;
 
 function App() {
   const [notes, setNotes] = useState<Map<string, string> | null>(null);
@@ -11,6 +13,7 @@ function App() {
   const [body, setBody] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const pageNames = useMemo(() => (notes ? [...notes.keys()].sort(comparePageNames) : []), [notes]);
 
   useEffect(() => {
     invoke<Record<string, string>>('load_notes').then(
@@ -69,12 +72,31 @@ function App() {
             <input id="page-name" value={nameInput} onChange={(event) => setNameInput(event.target.value)} disabled={!canNavigate} required />
             <button disabled={!canNavigate}>ページを開く</button>
           </form>
-          <h2>保存済みページ</h2>
-          {notes.size === 0 ? <p>まだありません。</p> : (
-            <ul>{[...notes.keys()].sort((a, b) => a.localeCompare(b, 'ja')).map((name) => (
-              <li key={name}><button type="button" aria-current={title === name ? 'page' : undefined} disabled={!canNavigate} onClick={() => open(name)}>{name}</button></li>
-            ))}</ul>
-          )}
+          <div className="page-explorer">
+            <h2>保存済みページ</h2>
+            {pageNames.length === 0 ? <p>まだありません。</p> : (
+              <>
+                <div className="page-explorer-heading" aria-hidden="true">名前</div>
+                <ul role="list" aria-label="保存済みページ" className="page-explorer-list">
+                  {pageNames.map((name) => (
+                    <li key={name}>
+                      <button
+                        type="button"
+                        aria-current={title === name ? 'page' : undefined}
+                        disabled={!canNavigate}
+                        onClick={() => open(name)}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" strokeLinejoin="round">
+                          <path d="M3.5 1.5h5l4 4v9h-9z M8.5 1.5v4h4 M5.5 8.5h5 M5.5 11h5" />
+                        </svg>
+                        <span>{name}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
         </aside>
         <section aria-label="ノート編集">
           {error && <p role="alert">{error}</p>}
