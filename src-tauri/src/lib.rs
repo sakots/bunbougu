@@ -20,7 +20,7 @@ struct Workspace {
 fn load_notes(app: AppHandle) -> (bool, Result<Workspace, String>) {
     let workspace = (|| {
         let folder = store::active_folder(&app_data(&app)?).map_err(|error| error.to_string())?;
-        let notes = store::load(&folder.join("notes.json")).map_err(|error| error.to_string())?;
+        let notes = store::load(&folder).map_err(|error| error.to_string())?;
         Ok(Workspace { folder, notes })
     })();
     (cfg!(desktop), workspace)
@@ -47,7 +47,7 @@ async fn choose_storage_folder(app: AppHandle) -> Result<Option<Workspace>, Stri
 #[tauri::command]
 fn save_note(app: AppHandle, title: String, body: String) -> Result<(), String> {
     let folder = store::active_folder(&app_data(&app)?).map_err(|error| error.to_string())?;
-    store::save(&folder.join("notes.json"), &title, &body).map_err(|error| error.to_string())
+    store::save(&folder, &title, &body).map_err(|error| error.to_string())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
