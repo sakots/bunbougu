@@ -50,15 +50,23 @@ fn save_note(app: AppHandle, title: String, body: String) -> Result<(), String> 
     store::save(&folder, &title, &body).map_err(|error| error.to_string())
 }
 
+#[tauri::command]
+fn delete_note(app: AppHandle, title: String) -> Result<(), String> {
+    let folder = store::active_folder(&app_data(&app)?).map_err(|error| error.to_string())?;
+    store::delete(&folder, &title).map_err(|error| error.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let builder = tauri::Builder::default();
     #[cfg(desktop)]
     let builder = builder
         .plugin(tauri_plugin_dialog::init())
-        .invoke_handler(tauri::generate_handler![load_notes, save_note, choose_storage_folder]);
+        .invoke_handler(tauri::generate_handler![
+            load_notes, save_note, delete_note, choose_storage_folder
+        ]);
     #[cfg(mobile)]
-    let builder = builder.invoke_handler(tauri::generate_handler![load_notes, save_note]);
+    let builder = builder.invoke_handler(tauri::generate_handler![load_notes, save_note, delete_note]);
 
     builder
         .run(tauri::generate_context!())

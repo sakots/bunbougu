@@ -120,6 +120,10 @@ pub(super) fn save(folder: &Path, title: &str, body: &str) -> io::Result<()> {
     write_json(&path, &Page { title, body })
 }
 
+pub(super) fn delete(folder: &Path, title: &str) -> io::Result<()> {
+    fs::remove_file(folder.join(PAGES).join(page_filename(title)))
+}
+
 fn write_json(path: &Path, value: &(impl serde::Serialize + ?Sized)) -> io::Result<()> {
     let dir = path.parent().expect("storage path has a parent directory");
     fs::create_dir_all(dir)?;

@@ -1,5 +1,5 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
-import { type FormEvent, useEffect, useMemo, useState } from 'react';
+import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { pageLinks, pageName } from './wiki';
 import './style.css';
@@ -15,6 +15,8 @@ function App() {
   const [nameInput, setNameInput] = useState('');
   const [body, setBody] = useState('');
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const deleteDialog = useRef<HTMLDialogElement>(null);
   const [folder, setFolder] = useState('');
   const [canChooseFolder, setCanChooseFolder] = useState(false);
   const [choosingFolder, setChoosingFolder] = useState(false);
@@ -38,7 +40,8 @@ function App() {
 
   const savedBody = title === null ? undefined : notes?.get(title);
   const dirty = title !== null && body !== (savedBody ?? '');
-  const canNavigate = !dirty && !saving && !choosingFolder;
+  const busy = saving || choosingFolder || deleting;
+  const canNavigate = !dirty && !busy;
 
   async function chooseFolder() {
     if (!canNavigate) return;
@@ -89,7 +92,7 @@ function App() {
   }
 
   async function save() {
-    if (title === null || notes === null || saving || choosingFolder) return;
+    if (title === null || notes === null || busy) return;
     setSaving(true);
     setError('');
     try {
@@ -99,6 +102,25 @@ function App() {
       setError(`保存に失敗しました: ${cause}`);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function deleteNote() {
+    deleteDialog.current?.close();
+    if (title === null || notes === null || savedBody === undefined || !canNavigate) return;
+    setDeleting(true);
+    setError('');
+    try {
+      await invoke('delete_note', { title });
+      const remaining = new Map(notes);
+      remaining.delete(title);
+      setNotes(remaining);
+      setTitle(null);
+      setBody('');
+    } catch (cause) {
+      setError(`削除に失敗しました: ${cause}`);
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -145,12 +167,21 @@ function App() {
             <>
               <h2>{title}</h2>
               <label htmlFor="note-body">本文</label>
-              <textarea id="note-body" value={body} onChange={(event) => setBody(event.target.value)} disabled={saving || choosingFolder} />
+              <textarea id="note-body" value={body} onChange={(event) => setBody(event.target.value)} disabled={busy} />
               <div className="actions">
-                <button type="button" onClick={save} disabled={saving || choosingFolder || (!dirty && savedBody !== undefined)}>保存</button>
-                <button type="button" onClick={() => { setBody(savedBody ?? ''); setError(''); }} disabled={!dirty || saving || choosingFolder}>変更を戻す</button>
-                <span role="status">{saving ? '保存中…' : dirty || savedBody === undefined ? '未保存' : '保存済み'}</span>
+                <button type="button" onClick={save} disabled={busy || (!dirty && savedBody !== undefined)}>保存</button>
+                <button type="button" onClick={() => { setBody(savedBody ?? ''); setError(''); }} disabled={!dirty || busy}>変更を戻す</button>
+                {savedBody !== undefined && <button type="button" onClick={() => deleteDialog.current?.showModal()} disabled={!canNavigate}>削除</button>}
+                <span role="status">{deleting ? '削除中…' : saving ? '保存中…' : dirty || savedBody === undefined ? '未保存' : '保存済み'}</span>
               </div>
+              <dialog ref={deleteDialog} aria-labelledby="delete-title">
+                <h3 id="delete-title">ノートを削除</h3>
+                <p>「{title}」を削除します。この操作は取り消せません。</p>
+                <form method="dialog" className="actions">
+                  <button autoFocus>キャンセル</button>
+                  <button type="button" onClick={deleteNote}>削除する</button>
+                </form>
+              </dialog>
               <h3>ページリンク</h3>
               <ul>{pageLinks(body).map((name) => (
                 <li key={name}><button type="button" disabled={!canNavigate} onClick={() => open(name)}>{name}</button></li>
