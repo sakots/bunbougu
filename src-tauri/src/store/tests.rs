@@ -81,3 +81,18 @@ fn legacy_notes_are_converted_once_without_changing_the_backup() {
     assert_eq!(load(folder).unwrap()["CON"], "new body");
     assert_eq!(fs::read(folder.join("notes.json")).unwrap(), legacy);
 }
+
+#[test]
+fn deletion_removes_only_the_named_page_and_does_not_restore_the_backup() {
+    let dir = tempfile::tempdir().unwrap();
+    let folder = dir.path();
+    fs::write(folder.join("notes.json"), br#"{"Plan":"old body"}"#).unwrap();
+    load(folder).unwrap();
+    save(folder, "plan", "keep").unwrap();
+
+    delete(folder, "Plan").unwrap();
+    assert_eq!(load(folder).unwrap(), Notes::from([("plan".into(), "keep".into())]));
+    delete(folder, "plan").unwrap();
+    assert!(load(folder).unwrap().is_empty());
+    assert_eq!(fs::read_dir(folder.join("pages")).unwrap().count(), 0);
+}
